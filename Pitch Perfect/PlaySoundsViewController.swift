@@ -18,6 +18,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     var audioEngine: AVAudioEngine!
     var audioFile: AVAudioFile!
     var audioPlayerNode: AVAudioPlayerNode!
+    var timer: NSTimer?
     
     //MARK: - Overrides
     //MARK: View methods
@@ -94,6 +95,12 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     
     func playAudioWithVariableRate(rate: Float) {
         
+        //If timer relating to playAudioWithVariablePitch is running, invalidate it.
+        //This prevents the stop button from behaving weirdly.
+        if self.timer != nil {
+            self.timer!.invalidate()
+        }
+        
         //Stop audioPlayer, then restart it with the new rate from the beginning of the audio file.
         audioPlayer.stop()
         audioPlayer.rate = rate
@@ -152,9 +159,12 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
             UIView.animateWithDuration(0.4,
                 animations: {self.stopButton.alpha = 1.0})
             
-            //TODO: Find better way to hide the stop button, this way has weird behaviour sometimes.
-            delay(self.audioPlayer.duration,
-                closure: {UIView.animateWithDuration(0.4, animations: {self.stopButton.alpha = 0.0})})
+            //The following timer makes the stop button hide again once the sound has finished playing.
+            //If timer already exists, invalidate it then start a new one.
+            if self.timer != nil {
+                self.timer!.invalidate()
+            }
+            self.timer = NSTimer.scheduledTimerWithTimeInterval(self.audioPlayer.duration, target: self, selector: "stopButtonFade", userInfo: nil, repeats: false)
         }
     }
     
@@ -175,10 +185,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         UIView.animateWithDuration(0.4, animations: {self.stopButton.alpha = 0.0})
     }
     
-    //Great helper function "borrowed" from StackOverflow, delays the execution of a block of code.
-    func delay(delay: Double, closure:() -> ()) {
-        
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(delay * Double(NSEC_PER_SEC))), dispatch_get_main_queue(), closure)
+    func stopButtonFade() {
+        UIView.animateWithDuration(0.4, animations: {self.stopButton.alpha = 0.0})
     }
-    
 }
