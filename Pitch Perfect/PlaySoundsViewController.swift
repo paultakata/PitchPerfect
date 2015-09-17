@@ -27,10 +27,10 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         super.viewDidLoad()
         
         audioEngine = AVAudioEngine()
-        audioPlayer = AVAudioPlayer(contentsOfURL: receivedAudio.filePathURL, error: nil)
+        audioPlayer = try? AVAudioPlayer(contentsOfURL: receivedAudio.filePathURL!)
         audioPlayer.enableRate = true
         audioPlayer.delegate = self
-        audioFile = AVAudioFile(forReading: receivedAudio.filePathURL, error: nil)
+        audioFile = try? AVAudioFile(forReading: receivedAudio.filePathURL!)
     }
     
     override func viewWillAppear(animated: Bool) {
@@ -43,10 +43,12 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         let fileManager = NSFileManager.defaultManager()
         var error: NSError?
         
-        if fileManager.removeItemAtURL(receivedAudio.filePathURL!, error: &error) {
-            println("Deleting file")
-        } else {
-            println("Remove failed: \(error!.localizedDescription)")
+        do {
+            try fileManager.removeItemAtURL(receivedAudio.filePathURL!)
+            print("Deleting file")
+        } catch let error1 as NSError {
+            error = error1
+            print("Remove failed: \(error!.localizedDescription)")
         }
     }
     
@@ -126,12 +128,12 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         audioEngine.attachNode(audioPlayerNode)
         
         //Create pitch changing effect unit, attach it to audioEngine.
-        var changePitchEffect = AVAudioUnitTimePitch()
+        let changePitchEffect = AVAudioUnitTimePitch()
         changePitchEffect.pitch = pitch
         audioEngine.attachNode(changePitchEffect)
         
         //Create reverb effect unit, attach it to audioEngine.
-        var reverbEffect = AVAudioUnitReverb()
+        let reverbEffect = AVAudioUnitReverb()
         reverbEffect.loadFactoryPreset(AVAudioUnitReverbPreset.LargeRoom)
         reverbEffect.wetDryMix = 50
         audioEngine.attachNode(reverbEffect)
@@ -151,7 +153,10 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         audioPlayerNode.scheduleFile(audioFile,
             atTime: nil,
             completionHandler: nil)
-        audioEngine.startAndReturnError(nil)
+        do {
+            try audioEngine.start()
+        } catch _ {
+        }
         audioPlayerNode.play()
         
         //If it is playing, show the stop button for the duration of the sound file.
@@ -179,7 +184,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         audioPlayer.stop()
     }
     
-    func audioPlayerDidFinishPlaying(player: AVAudioPlayer!, successfully flag: Bool) {
+    func audioPlayerDidFinishPlaying(player: AVAudioPlayer, successfully flag: Bool) {
         
         //Hide the stop button once AVAudioPlayer has finished playing.
         UIView.animateWithDuration(0.4, animations: {self.stopButton.alpha = 0.0})
